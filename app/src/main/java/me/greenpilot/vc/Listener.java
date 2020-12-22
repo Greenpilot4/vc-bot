@@ -28,6 +28,12 @@ public class Listener extends ListenerAdapter {
             return;
         }
 
+        if (!config.Get("TARGET").isEmpty()) {
+            if(!event.getMember().getUser().getId().equals(config.Get("TARGET"))) {
+                return;
+            }
+        }
+
         VoiceChannel connectedChannel = Objects.requireNonNull(event.getMember().getVoiceState()).getChannel();
         AudioManager audioManager = event.getGuild().getAudioManager();
 
