@@ -1,0 +1,25 @@
+plugins {
+    id'java'
+    id'application'
+    id'com.github.johnrengelman.shadow' version '4.0.4'
+}
+
+mainClassName = 'me.greenpilot.vc.Bot'
+
+version '1.0'
+
+sourceCompatibility = 1.8
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile group: 'net.dv8tion', name: 'JDA', version: '4.2.0_223'
+    compile group: 'com.jagrosh', name: 'jda-utilities', version: '3.0.5'
+    compile group: 'me.duncte123', name: 'botCommons', version: '2.0.122'
+    compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
+    implementation group: 'io.github.cdimascio', name: 'java-dotenv', version: '5.1.1'
+}
+
+compileJava.options.encoding = 'UTF-8'
