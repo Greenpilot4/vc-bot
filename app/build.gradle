@@ -4,10 +4,12 @@ plugins {
     id'com.github.johnrengelman.shadow' version '4.0.4'
 }
 
+//noinspection GroovyUnusedAssignment
 mainClassName = 'me.greenpilot.vc.Bot'
 
 version '1.0'
 
+//noinspection GroovyUnusedAssignment
 sourceCompatibility = 1.8
 
 repositories {
@@ -19,6 +21,7 @@ dependencies {
     compile group: 'com.jagrosh', name: 'jda-utilities', version: '3.0.5'
     compile group: 'me.duncte123', name: 'botCommons', version: '2.0.122'
     compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
+    compile group: 'org.mongodb', name: 'mongodb-driver', version: '3.6.3'
     implementation group: 'io.github.cdimascio', name: 'java-dotenv', version: '5.1.1'
 }
 
