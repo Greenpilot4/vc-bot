@@ -72,26 +72,20 @@ public class Listener extends ListenerAdapter {
 
     @Override
     public void onGuildMessageReceived(@NotNull GuildMessageReceivedEvent event) {
-        MongoClient mongoClient = new MongoClient(new MongoClientURI(config.Get("MONGODB")));
-        //noinspection deprecation
-        DB database = mongoClient.getDB("antizook");
-        DBCollection collection = database.getCollection("695346842900234332");
+
+        if (!MongoDB.getAdmins(event.getGuild().getId()).contains(event.getAuthor().getId()))
+            return;
 
         String msg = event.getMessage().getContentRaw();
 
-        if (!msg.startsWith(".set target "))
-            return;
-
-        DBCursor cursor = collection.find();
-        while (cursor.hasNext()) {
-            DBObject obj = cursor.next();
-            String authorid = event.getAuthor().getId();
-            String admins = obj.get("ADMINS").toString();
-            if (!admins.contains(authorid)) {
-                LOGGER.info("User {} attempted to run a command but was blocked", event.getAuthor().getAsTag());
-            }
+        if (msg.startsWith(".set admin ")) {
+            String admin = msg.substring(11);
+            MongoDB.setAdmin(event.getGuild().getId(), admin);
         }
 
-        MessageChannel channel = event.getChannel();
+        if (msg.startsWith(".set target ")) {
+            String target = msg.substring(12);
+            MongoDB.setTarget(event.getGuild().getId(), target);
+        }
     }
 }
