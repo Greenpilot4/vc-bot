@@ -1,88 +1,86 @@
 package me.greenpilot.vc;
 
-import com.mongodb.*;
-import com.mongodb.client.model.Filters;
-import com.mongodb.util.JSON;
+import com.mongodb.client.model.Updates;
+import org.bson.conversions.Bson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MongoDB {
+import com.mongodb.*;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+
+import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.result.*;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
+import java.util.List;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.function.Consumer;
+
+import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Updates.*;
+
+public abstract class MongoDB {
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoDB.class);
-    private static MongoClient mongoClient;
-    private static DB database;
-    private static DBCollection collection;
-    static boolean connected;
 
-    private static void connect() {
-        mongoClient = new MongoClient(new MongoClientURI(config.Get("MONGODB")));
-        database = mongoClient.getDB("antizook");
-        collection = database.getCollection("guild-data");
+    private static final MongoClient mongoClient = MongoClients.create(config.Get("MONGODB"));
+    protected static MongoDatabase database = mongoClient.getDatabase("antizook");
+    protected static MongoCollection<Document> collection = database.getCollection("guild-data");
 
-        try {
-            mongoClient.getAddress();
-            connected = true;
-        } catch (Exception e) {
-            LOGGER.info("MongoDB connection unsuccessful.");
-            connected = false;
-            return;
-        }
+    public static void makeGuildDoc(String guild, String guild_name) {
+        Document guild_data = new Document("_id", guild)
+                .append("guild_name", guild_name)
+                .append("admins", Arrays.asList());
+
+        collection.insertOne(guild_data);
     }
-
-    public static void setAdmin(String guildID, String adminID) {
-        if (!connected) {
-            connect();
-        }
-        String json = "{ $push: { ADMINS: " + adminID + " } }";
-        DBObject push = (DBObject) JSON.parse(json);
-        DBObject find = new BasicDBObject("GUILD", guildID);
-        collection.update(find, push);
+    public static void addAdmin(String guild, String uid) {
+        collection.updateOne(
+                eq("_id",guild),
+                addToSet("admins", uid)
+        );
     }
+    public static void removeAdmin(String guild, String uid) {
+        Bson query =Filters.eq("_id", guild);
+        Bson delete = Updates.pull("admins", uid);
 
-    public static void setTarget(String guildID, String targetID) {
-        if (!connected) {
-            connect();
-        }
-        String json = "{ $set: { TARGET: " + targetID + " } }";
-        DBObject push = (DBObject) JSON.parse(json);
-        DBObject find = new BasicDBObject("GUILD", guildID);
-        collection.update(find, push);
+        collection.updateOne(query, delete);
     }
-
-    public static String getAdmins(String guildID) {
-        String admins = null;
-        if (!connected) {
-            connect();
-        }
-
-        DBCursor cursor = collection.find();
-        while (cursor.hasNext()) {
-            DBObject obj = cursor.next();
-            if (obj.get("GUILD").toString().contains(guildID)) {
-                admins = obj.get("ADMINS").toString();
+    public static Boolean checkAdmins(String guild, String uid) {
+        final boolean[] isAdmin = {false};
+        Consumer<Document> printConsumer = new Consumer<Document>() {
+            @Override
+            public void accept(final Document document) {
+                if(document.toJson() != null)
+                    isAdmin[0] = true;
             }
-        }
-        if (admins == null) {
-            admins = "Failed to get admins.";
-        }
-        return admins;
+        };
+        collection.find(and(eq("_id", guild), eq("admins", uid)))
+                .forEach(printConsumer);
+        return isAdmin[0];
     }
-
-    public static String getTarget(String guildID) {
-        String target = null;
-        if (!connected) {
-            connect();
-        }
-
-        DBCursor cursor = collection.find();
-        while (cursor.hasNext()) {
-            DBObject obj = cursor.next();
-            if (obj.get("GUILD").toString().contains(guildID)) {
-                target = obj.get("TARGET").toString();
+    public static void setTarget(String guild, String uid) {
+        collection.updateOne(
+                eq("_id",guild),
+                set("target", uid)
+        );
+    }
+    public static Boolean checkTarget(String guild, String uid) {
+        final boolean[] isTarget = {false};
+        Consumer<Document> printConsumer = new Consumer<Document>() {
+            @Override
+            public void accept(final Document document) {
+                if(document.toJson() != null)
+                    isTarget[0] = true;
             }
-        }
-        if (target == null) {
-            target = "Failed to get target.";
-        }
-        return target;
+        };
+        collection.find(and(eq("_id", guild), eq("target", uid)))
+                .forEach(printConsumer);
+        return isTarget[0];
     }
 }

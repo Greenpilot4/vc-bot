@@ -2,8 +2,10 @@ package me.greenpilot.vc;
 
 import com.mongodb.*;
 import net.dv8tion.jda.api.entities.MessageChannel;
+import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.VoiceChannel;
 import net.dv8tion.jda.api.events.ReadyEvent;
+import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceJoinEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceLeaveEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceMoveEvent;
@@ -27,13 +29,20 @@ public class Listener extends ListenerAdapter {
     }
 
     @Override
+    public void onGuildJoin(@Nonnull GuildJoinEvent event) {
+        String guild = event.getGuild().getId();
+        String guild_name = event.getGuild().getName();
+
+        MongoDB.makeGuildDoc(guild, guild_name);
+    }
+
+        @Override
     public void onGuildVoiceJoin(@Nonnull GuildVoiceJoinEvent event) {
         if(event.getMember().getUser().isBot())
             return;
 
-        if (!config.Get("TARGET").isEmpty())
-            if(!event.getMember().getUser().getId().equals(config.Get("TARGET")))
-                return;
+        if(!MongoDB.checkTarget(event.getGuild().getId(), event.getMember().getId()))
+            return;
 
         VoiceChannel connectedChannel = Objects.requireNonNull(event.getMember().getVoiceState()).getChannel();
         AudioManager audioManager = event.getGuild().getAudioManager();
@@ -48,9 +57,8 @@ public class Listener extends ListenerAdapter {
         if(event.getMember().getUser().isBot())
             return;
 
-        if (!config.Get("TARGET").isEmpty())
-            if(!event.getMember().getUser().getId().equals(config.Get("TARGET")))
-                return;
+        if(!MongoDB.checkTarget(event.getGuild().getId(), event.getMember().getId()))
+            return;
 
         VoiceChannel connectedChannel = Objects.requireNonNull(event.getMember().getVoiceState()).getChannel();
         AudioManager audioManager = event.getGuild().getAudioManager();
@@ -72,20 +80,64 @@ public class Listener extends ListenerAdapter {
 
     @Override
     public void onGuildMessageReceived(@NotNull GuildMessageReceivedEvent event) {
+        String message = event.getMessage().getContentRaw();
+        String guild_id = event.getGuild().getId();
+        String user = event.getAuthor().getId();
+        TextChannel channel = event.getChannel();
 
-        if (!MongoDB.getAdmins(event.getGuild().getId()).contains(event.getAuthor().getId()))
-            return;
+        if(message.startsWith(".add admin ")) {
+            if(!MongoDB.checkAdmins(guild_id, user) && !user.equals(Objects.requireNonNull(event.getGuild().getOwner()).getId())) {
+                channel.sendMessage("You're not an admin!")
+                        .queue();
+                return;
+            }
+            String uid = message.substring(11);
+            String[] raw_id = null;
 
-        String msg = event.getMessage().getContentRaw();
+            if(message.contains("<")) {
+                raw_id = message.split("[<@!>]+");
+                uid = raw_id[1];
+            }
 
-        if (msg.startsWith(".set admin ")) {
-            String admin = msg.substring(11);
-            MongoDB.setAdmin(event.getGuild().getId(), admin);
+            MongoDB.addAdmin(guild_id, uid);
+            channel.sendMessage("Added user to admins!")
+                    .queue();
         }
+        if(message.startsWith(".remove admin ")) {
+            if(!user.equals(Objects.requireNonNull(event.getGuild().getOwner()).getId())) {
+                channel.sendMessage("You're not the owner!")
+                        .queue();
+                return;
+            }
+            String uid = message.substring(11);
+            String[] raw_id = null;
 
-        if (msg.startsWith(".set target ")) {
-            String target = msg.substring(12);
-            MongoDB.setTarget(event.getGuild().getId(), target);
+            if(message.contains("<")) {
+                raw_id = message.split("[<@!>]+");
+                uid = raw_id[1];
+            }
+
+            MongoDB.removeAdmin(guild_id, uid);
+            channel.sendMessage("Removed user from admins!")
+                    .queue();
+        }
+        if(message.startsWith(".set target ")) {
+            if(!MongoDB.checkAdmins(guild_id, user) && !user.equals(Objects.requireNonNull(event.getGuild().getOwner()).getId())) {
+                channel.sendMessage("You're not an admin!")
+                        .queue();
+                return;
+            }
+            String uid = message.substring(11);
+            String[] raw_id = null;
+
+            if(message.contains("<")) {
+                raw_id = message.split("[<@!>]+");
+                uid = raw_id[1];
+            }
+
+            MongoDB.setTarget(guild_id, uid);
+            channel.sendMessage("Target set!")
+                    .queue();
         }
     }
 }
