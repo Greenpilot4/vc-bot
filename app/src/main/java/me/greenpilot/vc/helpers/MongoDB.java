@@ -1,41 +1,37 @@
-package me.greenpilot.vc;
+package me.greenpilot.vc.helpers;
 
+import com.mongodb.BasicDBObject;
+import com.mongodb.client.*;
 import com.mongodb.client.model.Updates;
+
+import com.mongodb.client.model.Filters;
+
+import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mongodb.*;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.Filters;
-
-import com.mongodb.client.model.UpdateOptions;
-import com.mongodb.client.result.*;
-import org.bson.Document;
-import org.bson.types.ObjectId;
-
-import java.util.List;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Consumer;
 
 import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Projections.include;
 import static com.mongodb.client.model.Updates.*;
 
 public abstract class MongoDB {
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoDB.class);
 
-    private static final MongoClient mongoClient = MongoClients.create(config.Get("MONGODB"));
+    private static final MongoClient mongoClient = MongoClients.create(Config.get("MONGODB"));
     protected static MongoDatabase database = mongoClient.getDatabase("antizook");
     protected static MongoCollection<Document> collection = database.getCollection("guild-data");
 
     public static void makeGuildDoc(String guild, String guild_name) {
         Document guild_data = new Document("_id", guild)
                 .append("guild_name", guild_name)
-                .append("admins", Arrays.asList());
+                .append("admins", Collections.emptyList());
 
         collection.insertOne(guild_data);
     }
@@ -51,7 +47,7 @@ public abstract class MongoDB {
 
         collection.updateOne(query, delete);
     }
-    public static Boolean checkAdmins(String guild, String uid) {
+    public static Boolean checkAdmin(String guild, String uid) {
         final boolean[] isAdmin = {false};
         Consumer<Document> printConsumer = new Consumer<Document>() {
             @Override
@@ -82,5 +78,20 @@ public abstract class MongoDB {
         collection.find(and(eq("_id", guild), eq("target", uid)))
                 .forEach(printConsumer);
         return isTarget[0];
+    }
+    public static void setRoles(String guild, String member, List<String> roles) {
+        collection.updateOne(
+                eq("_id",guild),
+                set("member_roles" + member, Collections.singletonList(roles))
+        );
+    }
+    public static List<String> checkRoles(String guild, String member) {
+        FindIterable<Document> coll_roles = collection.find(eq("_id", guild));
+        List<String> roles = new ArrayList<String>();
+
+        for(Document doc : coll_roles) {
+            Document member_roles = (Document) doc.get("member_roles");
+        }
+        return roles;
     }
 }

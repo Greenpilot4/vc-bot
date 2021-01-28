@@ -1,12 +1,11 @@
-package me.greenpilot.vc;
+package me.greenpilot.vc.helpers;
 
 import io.github.cdimascio.dotenv.Dotenv;
 
-class config {
-
+public class Config {
     private static final Dotenv dotenv = Dotenv.load();
 
-    public static String Get(String key) {
+    public static String get(String key) {
         return dotenv.get(key.toUpperCase());
     }
 }
